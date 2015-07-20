@@ -303,7 +303,18 @@ public final class SwingHelper {
         }
         return null;
     }
-
+    
+    
+    public static ImageIcon readImageIcon(Class<?> clazz, String path) {
+        BufferedImage image = readIconImage(clazz, path);
+        if (image != null) {
+            return new ImageIcon(image);
+        } else {
+            return null;
+        }
+    }
+    
+    
     public static Image readIconImageScaled(Class<?> clazz, String path, int w, int h) {
         BufferedImage image = readIconImage(clazz, path);
         if (image != null) {
