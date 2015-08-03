@@ -20,6 +20,16 @@ import com.skcraft.launcher.swing.SwingHelper;
 import com.skcraft.launcher.util.HttpRequest;
 import com.skcraft.launcher.util.SharedLocale;
 import com.skcraft.launcher.util.SimpleLogFormatter;
+
+import com.sun.management.OperatingSystemMXBean;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+import lombok.extern.java.Log;
+import org.apache.commons.io.FileUtils;
+
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -87,8 +97,7 @@ public final class Launcher {
         SharedLocale.loadBundle("com.skcraft.launcher.lang.Launcher", Locale.getDefault());
 
         this.baseDir = baseDir;
-        this.properties = LauncherUtils.loadProperties(Launcher.class,
-                "launcher.properties", "com.skcraft.launcher.propertiesFile");
+        this.properties = LauncherUtils.loadProperties(Launcher.class, "launcher.properties", "com.skcraft.launcher.propertiesFile");
         this.instances = new InstanceList(this);
         this.assets = new AssetsRoot(new File(baseDir, "assets"));
         this.config = Persistence.load(new File(baseDir, "config.json"), Configuration.class);
@@ -99,6 +108,8 @@ public final class Launcher {
         mainServerURL = getProperties().getProperty("mainServerURL");
         backupServerURL = getProperties().getProperty("backupServerURL");
         this.accounts = Persistence.load(new File(baseDir, "accounts.dat"), AccountList.class);
+
+        setDefaultConfig();
 
         if (accounts.getSize() > 0) {
             accounts.setSelectedItem(accounts.getElementAt(0));
@@ -171,6 +182,30 @@ public final class Launcher {
             }
         }
         return true;
+    }
+
+    /**
+     * Updates any incorrect / unset configuration settings with defaults.
+     */
+    public void setDefaultConfig() {
+        double configMax = config.getMaxMemory() / 1024.0;
+        double suggestedMax = 2;
+        double available = Double.MAX_VALUE;
+
+        try {
+            OperatingSystemMXBean bean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            available = bean.getTotalPhysicalMemorySize() / 1024.0 / 1024.0 / 1024.0;
+            if (available <= 6) {
+                suggestedMax = available * 0.48;
+            } else {
+                suggestedMax = 4;
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (config.getMaxMemory() <= 0 || configMax >= available - 1) {
+            config.setMaxMemory((int) (suggestedMax * 1024));
+        }
     }
 
     /**
