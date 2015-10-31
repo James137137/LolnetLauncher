@@ -14,6 +14,7 @@ import com.skcraft.launcher.auth.AccountList;
 import com.skcraft.launcher.auth.LoginService;
 import com.skcraft.launcher.auth.YggdrasilLoginService;
 import com.skcraft.launcher.dialog.LauncherFrame;
+import com.skcraft.launcher.launch.LaunchSupervisor;
 import com.skcraft.launcher.model.minecraft.VersionManifest;
 import com.skcraft.launcher.persistence.Persistence;
 import com.skcraft.launcher.swing.SwingHelper;
@@ -77,6 +78,8 @@ public final class Launcher {
     private final AccountList accounts;
     @Getter
     private final AssetsRoot assets;
+    @Getter
+    private final LaunchSupervisor launchSupervisor = new LaunchSupervisor(this);
 
     public static File dataDir;
     public static File launcherJarFile;
