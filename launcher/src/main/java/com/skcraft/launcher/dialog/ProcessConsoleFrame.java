@@ -18,7 +18,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.PrintWriter;
 
-import static com.skcraft.launcher.util.SharedLocale.tr;
+
 
 /**
  * A version of the console window that can manage a process.
@@ -57,7 +57,7 @@ public class ProcessConsoleFrame extends ConsoleFrame {
         try {
             Process lastProcess = this.process;
             if (lastProcess != null) {
-                processOut.println(tr("console.processEndCode", lastProcess.exitValue()));
+                processOut.println(SharedLocale.tr("console.processEndCode", lastProcess.exitValue()));
             }
         } catch (IllegalThreadStateException e) {
         }
@@ -216,11 +216,7 @@ public class ProcessConsoleFrame extends ConsoleFrame {
     }
 
     private boolean confirmKill() {
-        if (System.getProperty("skcraftLauncher.killWithoutConfirm", "false").equalsIgnoreCase("true")) {
-            return true;
-        } else {
-            return SwingHelper.confirmDialog(this,  SharedLocale.tr("console.confirmKill"), SharedLocale.tr("console.confirmKillTitle"));
-        }
+        return SwingHelper.confirmDialog(this,  SharedLocale.tr("console.confirmKill"), SharedLocale.tr("console.confirmKillTitle"));
     }
 
     private void minimize() {

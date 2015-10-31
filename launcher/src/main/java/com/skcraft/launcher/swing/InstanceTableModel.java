@@ -3,7 +3,6 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher.swing;
 
 import com.skcraft.launcher.Instance;
@@ -15,8 +14,16 @@ import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
 
+
+import java.awt.image.BufferedImage;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import javax.imageio.ImageIO;
+
 public class InstanceTableModel extends AbstractTableModel {
 
+    private static HashMap<String, ImageIcon> imageIconMap = new HashMap<>();
     private final InstanceList instances;
     private final ImageIcon instanceIcon;
     private final ImageIcon customInstanceIcon;
@@ -102,17 +109,119 @@ public class InstanceTableModel extends AbstractTableModel {
             case 0:
                 instance = instances.get(rowIndex);
                 if (!instance.isLocal()) {
-                    return downloadIcon;
+                    return getDownloadIcon(instance);
                 } else if (instance.getManifestURL() != null) {
-                    return instanceIcon;
+                    return getInstanceIcon(instance);
                 } else {
-                    return customInstanceIcon;
+                    return getCustomInstanceIcon(instance);
                 }
             case 1:
                 instance = instances.get(rowIndex);
-                return instance.getTitle();
+                return "<html>" + SwingHelper.htmlEscape(instance.getTitle()) + getAddendum(instance) + "</html>";
             default:
                 return null;
+        }
+    }
+
+    private String getAddendum(Instance instance) {
+        if (!instance.isLocal()) {
+            return " <span style=\"color: #cccccc\">" + SharedLocale.tr("launcher.notInstalledHint") + "</span>";
+        } else if (!instance.isInstalled()) {
+            return " <span style=\"color: red\">" + SharedLocale.tr("launcher.requiresUpdateHint") + "</span>";
+        } else if (instance.isUpdatePending()) {
+            return " <span style=\"color: #3758DB\">" + SharedLocale.tr("launcher.updatePendingHint") + "</span>";
+        } else {
+            return "";
+        }
+    }
+
+    private ImageIcon getDownloadIcon(Instance instance) {
+        //if (true) return downloadIcon;
+        ImageIcon icon = imageIconMap.get(instance.getTitle() + "_" + "DownloadIcon");
+        if (icon == null) {
+            BufferedImage image;
+            try {
+                URL url = new URL("https://www.lolnet.co.nz/modpack/instanceicon/" + instance.getTitle().replaceAll(" ", "_") + "/download_icon.png");
+                url = Launcher.checkURL(url);
+                if (exists(url.toString())) {
+                    image = ImageIO.read(url);
+                    icon = new ImageIcon(image.getScaledInstance(16, 16, Image.SCALE_SMOOTH));
+                }
+                else
+                {
+                    icon = downloadIcon;
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            imageIconMap.put(instance.getTitle() + "_" + "DownloadIcon", icon);
+        }
+        return icon;
+
+    }
+
+    private ImageIcon getInstanceIcon(Instance instance) {
+        ImageIcon icon = imageIconMap.get(instance.getTitle() + "_" + "InstanceIcon");
+        if (icon == null) {
+            BufferedImage image;
+            try {
+                URL url = new URL("https://www.lolnet.co.nz/modpack/instanceicon/" + instance.getTitle().replaceAll(" ", "_") + "/instance_icon.png");
+                url = Launcher.checkURL(url);
+                if (exists(url.toString())) {
+                    image = ImageIO.read(url);
+                    icon = new ImageIcon(image.getScaledInstance(16, 16, Image.SCALE_SMOOTH));
+                }
+                else
+                {
+                   icon = instanceIcon; 
+                }
+            } catch (Exception ex) {
+                icon = downloadIcon;
+                ex.printStackTrace();
+            }
+            imageIconMap.put(instance.getTitle() + "_" + "InstanceIcon", icon);
+        }
+
+        return icon;
+    }
+
+    private ImageIcon getCustomInstanceIcon(Instance instance) {
+        ImageIcon icon = imageIconMap.get(instance.getTitle() + "_" + "CustomInstanceIcon");
+        if (icon == null) {
+            BufferedImage image;
+            try {
+                URL url = new URL("https://www.lolnet.co.nz/modpack/instanceicon/" + instance.getTitle().replaceAll(" ", "_") + "/custom_instance_icon.png");
+                url = Launcher.checkURL(url);
+                if (exists(url.toString())) {
+                    image = ImageIO.read(url);
+                    icon = new ImageIcon(image.getScaledInstance(16, 16, Image.SCALE_SMOOTH));
+                }
+                else
+                {
+                   icon = customInstanceIcon; 
+                }
+            } catch (Exception ex) {
+                icon = customInstanceIcon;
+                ex.printStackTrace();
+            }
+            imageIconMap.put(instance.getTitle() + "_" + "CustomInstanceIcon", icon);
+        }
+
+        return customInstanceIcon;
+    }
+
+    public static boolean exists(String URLName) {
+        try {
+            HttpURLConnection.setFollowRedirects(false);
+            // note : you may also need
+            //        HttpURLConnection.setInstanceFollowRedirects(false)
+            HttpURLConnection con
+                    = (HttpURLConnection) new URL(URLName).openConnection();
+            con.setRequestMethod("HEAD");
+            return (con.getResponseCode() == HttpURLConnection.HTTP_OK);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
     }
 

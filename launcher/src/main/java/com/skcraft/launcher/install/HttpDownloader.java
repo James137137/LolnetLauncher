@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
-import static com.skcraft.launcher.util.SharedLocale.tr;
+
 
 @Log
 public class HttpDownloader implements Downloader {
@@ -159,9 +159,9 @@ public class HttpDownloader implements Downloader {
 
     @Override
     public synchronized String getStatus() {
-        String failMessage = tr("downloader.failedCount", failed.size());
+        String failMessage = SharedLocale.tr("downloader.failedCount", failed.size());
         if (running.size() == 1) {
-            return tr("downloader.downloadingItem", running.get(0).getName()) +
+            return SharedLocale.tr("downloader.downloadingItem", running.get(0).getName()) +
                     "\n" + running.get(0).getStatus() +
                     "\n" + failMessage;
         } else if (running.size() > 0) {
@@ -170,7 +170,7 @@ public class HttpDownloader implements Downloader {
                 builder.append("\n");
                 builder.append(job.getStatus());
             }
-            return tr("downloader.downloadingList", queue.size(), left, failed.size()) +
+            return SharedLocale.tr("downloader.downloadingList", queue.size(), left, failed.size()) +
                     builder.toString() +
                     "\n" + failMessage;
         } else {
@@ -271,9 +271,9 @@ public class HttpDownloader implements Downloader {
         public String getStatus() {
             double progress = getProgress();
             if (progress >= 0) {
-                return tr("downloader.jobProgress", name, Math.round(progress * 100 * 100) / 100.0);
+                return SharedLocale.tr("downloader.jobProgress", name, Math.round(progress * 100 * 100) / 100.0);
             } else {
-                return tr("downloader.jobPending", name);
+                return SharedLocale.tr("downloader.jobPending", name);
             }
         }
     }

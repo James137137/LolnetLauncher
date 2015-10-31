@@ -18,11 +18,8 @@ import com.skcraft.launcher.model.minecraft.VersionManifest;
 import com.skcraft.launcher.model.modpack.Manifest;
 import com.skcraft.launcher.persistence.Persistence;
 import com.skcraft.launcher.util.HttpRequest;
+import static com.skcraft.launcher.util.HttpRequest.url;
 import com.skcraft.launcher.util.SharedLocale;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
-import lombok.extern.java.Log;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +29,11 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
-
-import static com.skcraft.launcher.util.HttpRequest.url;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+import lombok.extern.java.Log;
+import nz.co.lolnet.statistics.ThreadInstalledModpack;
 
 @Log
 public class Updater extends BaseUpdater implements Callable<Instance>, ProgressObservable {
@@ -66,17 +66,24 @@ public class Updater extends BaseUpdater implements Callable<Instance>, Progress
     public Instance call() throws Exception {
         log.info("Checking for an update for '" + instance.getName() + "'...");
 
-        // Force the directory to be created
-        instance.getContentDir();
-
         boolean updateRequired = !instance.isInstalled();
         boolean updateDesired = (instance.isUpdatePending() || updateRequired);
         boolean updateCapable = (instance.getManifestURL() != null);
 
         if (!online && updateRequired) {
-            log.info("Can't update " + instance.getTitle() + " because offline");
-            String message = SharedLocale.tr("updater.updateRequiredButOffline");
-            throw new LauncherException("Update required but currently offline", message);
+        log.info("Can't update " + instance.getTitle() + " because offline");
+        String message = SharedLocale.tr("updater.updateRequiredButOffline");
+        throw new LauncherException("Update required but currently offline", message);
+        }
+        
+        if(updateRequired)
+        {
+            //new install
+            new ThreadInstalledModpack(instance.getTitle(), instance.getVersion());
+        }
+        if(instance.isInstalled() && instance.isUpdatePending())
+        {
+            //modpack needs updating
         }
 
         if (updateDesired && !updateCapable) {

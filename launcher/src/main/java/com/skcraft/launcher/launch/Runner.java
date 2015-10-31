@@ -3,7 +3,6 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher.launch;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -13,6 +12,7 @@ import com.google.common.io.Files;
 import com.skcraft.concurrency.DefaultProgress;
 import com.skcraft.concurrency.ProgressObservable;
 import com.skcraft.launcher.*;
+import static com.skcraft.launcher.LauncherUtils.checkInterrupted;
 import com.skcraft.launcher.auth.Session;
 import com.skcraft.launcher.install.ZipExtract;
 import com.skcraft.launcher.model.minecraft.AssetsIndex;
@@ -22,22 +22,21 @@ import com.skcraft.launcher.persistence.Persistence;
 import com.skcraft.launcher.util.Environment;
 import com.skcraft.launcher.util.Platform;
 import com.skcraft.launcher.util.SharedLocale;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.Setter;
-import lombok.extern.java.Log;
-import org.apache.commons.lang.text.StrSubstitutor;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-
-import static com.skcraft.launcher.LauncherUtils.checkInterrupted;
-import static com.skcraft.launcher.util.SharedLocale.tr;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
+import lombok.extern.java.Log;
+import nz.co.lolnet.statistics.ThreadLaunchedModpack;
+import org.apache.commons.lang.text.StrSubstitutor;
 
 /**
  * Handles the launching of an instance.
@@ -52,7 +51,9 @@ public class Runner implements Callable<Process>, ProgressObservable {
     private final Instance instance;
     private final Session session;
     private final File extractDir;
-    @Getter @Setter private Environment environment = Environment.getInstance();
+    @Getter
+    @Setter
+    private Environment environment = Environment.getInstance();
 
     private VersionManifest versionManifest;
     private AssetsIndex assetsIndex;
@@ -70,7 +71,7 @@ public class Runner implements Callable<Process>, ProgressObservable {
      * @param extractDir the directory to extract to
      */
     public Runner(@NonNull Launcher launcher, @NonNull Instance instance,
-                  @NonNull Session session, @NonNull File extractDir) {
+            @NonNull Session session, @NonNull File extractDir) {
         this.launcher = launcher;
         this.instance = instance;
         this.session = session;
@@ -111,12 +112,12 @@ public class Runner implements Callable<Process>, ProgressObservable {
             instance.setInstalled(false);
             Persistence.commitAndForget(instance);
             throw new LauncherException("Missing assets index " + assetsFile.getAbsolutePath(),
-                    tr("runner.missingAssetsIndex", instance.getTitle(), assetsFile.getAbsolutePath()));
+                    SharedLocale.tr("runner.missingAssetsIndex", instance.getTitle(), assetsFile.getAbsolutePath()));
         } catch (IOException e) {
             instance.setInstalled(false);
             Persistence.commitAndForget(instance);
             throw new LauncherException("Corrupt assets index " + assetsFile.getAbsolutePath(),
-                    tr("runner.corruptAssetsIndex", instance.getTitle(), assetsFile.getAbsolutePath()));
+                    SharedLocale.tr("runner.corruptAssetsIndex", instance.getTitle(), assetsFile.getAbsolutePath()));
         }
 
         // Copy over assets to the tree
@@ -135,7 +136,6 @@ public class Runner implements Callable<Process>, ProgressObservable {
         addJvmArgs();
         addLibraries();
         addJarArgs();
-        addProxyArgs();
         addWindowArgs();
         addPlatformArgs();
 
@@ -150,6 +150,9 @@ public class Runner implements Callable<Process>, ProgressObservable {
         checkInterrupted();
 
         progress = new DefaultProgress(1, SharedLocale.tr("runner.startingJava"));
+
+        //cptwin, launcher statistics
+        new ThreadLaunchedModpack(instance.getTitle());
 
         return processBuilder.start();
     }
@@ -185,7 +188,8 @@ public class Runner implements Callable<Process>, ProgressObservable {
      */
     private void addLibraries() throws LauncherException {
         // Add libraries to classpath or extract the libraries as necessary
-        for (Library library : versionManifest.getLibraries()) {
+        LinkedHashSet<Library> libraries = versionManifest.getLibraries();
+        for (Library library : libraries) {
             if (!library.matches(environment)) {
                 continue;
             }
@@ -205,7 +209,7 @@ public class Runner implements Callable<Process>, ProgressObservable {
                 instance.setInstalled(false);
                 Persistence.commitAndForget(instance);
                 throw new LauncherException("Missing library " + library.getName(),
-                        tr("runner.missingLibrary", instance.getTitle(), library.getName()));
+                        SharedLocale.tr("runner.missingLibrary", instance.getTitle(), library.getName()));
             }
         }
 
@@ -273,34 +277,6 @@ public class Runner implements Callable<Process>, ProgressObservable {
         StrSubstitutor substitutor = new StrSubstitutor(getCommandSubstitutions());
         for (String arg : rawArgs) {
             args.add(substitutor.replace(arg));
-        }
-    }
-
-    /**
-     * Add proxy arguments.
-     */
-    private void addProxyArgs() {
-        List<String> args = builder.getArgs();
-
-        if (config.isProxyEnabled()) {
-            String host = config.getProxyHost();
-            int port = config.getProxyPort();
-            String username = config.getProxyUsername();
-            String password = config.getProxyPassword();
-
-            if (!Strings.isNullOrEmpty(host) && port > 0 && port < 65535) {
-                args.add("--proxyHost");
-                args.add(config.getProxyHost());
-                args.add("--proxyPort");
-                args.add(String.valueOf(port));
-
-                if (!Strings.isNullOrEmpty(username)) {
-                    builder.getArgs().add("--proxyUser");
-                    builder.getArgs().add(username);
-                    builder.getArgs().add("--proxyPass");
-                    builder.getArgs().add(password);
-                }
-            }
         }
     }
 

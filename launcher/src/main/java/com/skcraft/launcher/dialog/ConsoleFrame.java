@@ -22,7 +22,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-import static com.skcraft.launcher.util.SharedLocale.tr;
+
 
 /**
  * A frame capable of showing messages.
@@ -123,18 +123,18 @@ public class ConsoleFrame extends JFrame {
     private void pastebinLog() {
         String text = messageLog.getPastableText();
         // Not really bytes!
-        messageLog.log(tr("console.pasteUploading", text.length()), messageLog.asHighlighted());
+        messageLog.log(SharedLocale.tr("console.pasteUploading", text.length()), messageLog.asHighlighted());
 
         PastebinPoster.paste(text, new PastebinPoster.PasteCallback() {
             @Override
             public void handleSuccess(String url) {
-                messageLog.log(tr("console.pasteUploaded", url), messageLog.asHighlighted());
+                messageLog.log(SharedLocale.tr("console.pasteUploaded", url), messageLog.asHighlighted());
                 SwingHelper.openURL(url, messageLog);
             }
 
             @Override
             public void handleError(String err) {
-                messageLog.log(tr("console.pasteFailed", err), messageLog.asError());
+                messageLog.log(SharedLocale.tr("console.pasteFailed", err), messageLog.asError());
             }
         });
     }
@@ -151,13 +151,6 @@ public class ConsoleFrame extends JFrame {
             frame.setVisible(true);
             frame.registerLoggerHandler();
             frame.requestFocus();
-        }
-    }
-
-    public static void hideMessages() {
-        ConsoleFrame frame = globalFrame;
-        if (frame != null) {
-            frame.setVisible(false);
         }
     }
 

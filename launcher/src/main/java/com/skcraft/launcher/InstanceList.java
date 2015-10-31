@@ -3,20 +3,16 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher;
 
 import com.skcraft.concurrency.DefaultProgress;
 import com.skcraft.concurrency.ProgressObservable;
+import static com.skcraft.launcher.LauncherUtils.concat;
 import com.skcraft.launcher.model.modpack.ManifestInfo;
 import com.skcraft.launcher.model.modpack.PackageList;
 import com.skcraft.launcher.persistence.Persistence;
 import com.skcraft.launcher.util.HttpRequest;
 import com.skcraft.launcher.util.SharedLocale;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.extern.java.Log;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -26,8 +22,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-
-import static com.skcraft.launcher.LauncherUtils.concat;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.extern.java.Log;
+import nz.co.lolnet.james137137.PrivatePrivatePackagesManager;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
 
 /**
  * Stores the list of instances.
@@ -35,8 +34,11 @@ import static com.skcraft.launcher.LauncherUtils.concat;
 @Log
 public class InstanceList {
 
+    public static boolean showPublic = true;
+    public static boolean showPrivate = false;
     private final Launcher launcher;
-    @Getter private final List<Instance> instances = new ArrayList<Instance>();
+    @Getter
+    private final List<Instance> instances = new ArrayList<Instance>();
 
     /**
      * Create a new instance list.
@@ -67,8 +69,8 @@ public class InstanceList {
     }
 
     /**
-     * Create a worker that loads the list of instances from disk and from
-     * the remote list of packages.
+     * Create a worker that loads the list of instances from disk and from the
+     * remote list of packages.
      *
      * @return the worker
      */
@@ -100,6 +102,7 @@ public class InstanceList {
     }
 
     public final class Enumerator implements Callable<InstanceList>, ProgressObservable {
+
         private ProgressObservable progress = new DefaultProgress(-1, null);
 
         private Enumerator() {
@@ -113,6 +116,7 @@ public class InstanceList {
             List<Instance> local = new ArrayList<Instance>();
             List<Instance> remote = new ArrayList<Instance>();
 
+            List<String> listOfPublicPackages = PrivatePrivatePackagesManager.getPublicPackagesList();
             File[] dirs = launcher.getInstancesDir().listFiles((FileFilter) DirectoryFileFilter.INSTANCE);
             if (dirs != null) {
                 for (File dir : dirs) {
@@ -122,7 +126,18 @@ public class InstanceList {
                     instance.setName(dir.getName());
                     instance.setSelected(true);
                     instance.setLocal(true);
-                    local.add(instance);
+                    if (listOfPublicPackages.contains(instance.getName())) {
+                        instance.isPublic = true;
+                    } else {
+                        instance.isPublic = false;
+                    }
+                    if (showPublic && instance.isPublic) {
+                        local.add(instance);
+                    }
+
+                    if (showPrivate && !instance.isPublic) {
+                        local.add(instance);
+                    }
 
                     log.info(instance.getName() + " local instance found at " + dir.getAbsolutePath());
                 }
@@ -139,7 +154,7 @@ public class InstanceList {
                         .expectResponseCode(200)
                         .returnContent()
                         .asJson(PackageList.class);
-
+                PrivatePrivatePackagesManager.addPrivatePackages(packages);
                 if (packages.getMinimumVersion() > Launcher.PROTOCOL_VERSION) {
                     throw new LauncherException("Update required", SharedLocale.tr("errors.updateRequiredError"));
                 }
@@ -181,10 +196,22 @@ public class InstanceList {
                         instance.setManifestURL(concat(packagesURL, manifest.getLocation()));
                         instance.setUpdatePending(true);
                         instance.setLocal(false);
-                        remote.add(instance);
 
-                        log.info("Available remote instance: '" + instance.getName() +
-                                "' at version " + instance.getVersion());
+                        if (listOfPublicPackages.contains(instance.getName())) {
+                            instance.isPublic = true;
+                        } else {
+                            instance.isPublic = false;
+                        }
+                        if (showPublic && instance.isPublic) {
+                            remote.add(instance);
+                        }
+
+                        if (showPrivate && !instance.isPublic) {
+                            remote.add(instance);
+                        }
+
+                        log.info("Available remote instance: '" + instance.getName()
+                                + "' at version " + instance.getVersion());
                     }
                 }
             } catch (IOException e) {

@@ -9,14 +9,20 @@ package com.skcraft.launcher;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.io.Files;
+import com.skcraft.launcher.dialog.LauncherFrame;
 import com.skcraft.launcher.launch.JavaProcessBuilder;
 import com.skcraft.launcher.model.modpack.LaunchModifier;
+import com.skcraft.launcher.model.modpack.Manifest;
+import com.skcraft.launcher.util.HttpRequest;
 import lombok.Data;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.io.FileUtils;
 
 /**
  * An instance is a profile that represents one particular installation
@@ -31,6 +37,7 @@ public class Instance implements Comparable<Instance> {
     private boolean updatePending;
     private boolean installed;
     private Date lastAccessed;
+    public boolean isPublic;
     @JsonProperty("launch")
     private LaunchModifier launchModifier;
 
@@ -76,7 +83,7 @@ public class Instance implements Comparable<Instance> {
         }
         return dir;
     }
-
+    
     /**
      * Get the file for the directory where Minecraft's game files are
      * stored, including user files (screenshots, etc.).
@@ -86,10 +93,8 @@ public class Instance implements Comparable<Instance> {
     @JsonIgnore
     public File getContentDir() {
         File dir = new File(this.dir, "minecraft");
-        try {
-            Files.createParentDirs(dir);
-            dir.mkdir();
-        } catch (IOException ignored) {
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
         return dir;
     }
@@ -111,7 +116,32 @@ public class Instance implements Comparable<Instance> {
      */
     @JsonIgnore
     public File getVersionPath() {
-        return new File(getDir(), "version.json");
+        String gameVersion = "NULL";
+        try {
+            com.skcraft.launcher.model.modpack.Manifest manifest = HttpRequest
+                    .get(this.getManifestURL())
+                    .execute()
+                    .expectResponseCode(200)
+                    .returnContent()
+                    .asJson(Manifest.class);
+            gameVersion = manifest.getGameVersion();
+        } catch (IOException | InterruptedException ex) {
+            Logger.getLogger(Instance.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        if (title.equalsIgnoreCase("Vanilla") || title.equalsIgnoreCase("Resurrection") && !gameVersion.equals("NULL")) {
+            return new File(getDir(), "version.json");
+        } else {
+            try {
+                URL url = new URL("https://www.lolnet.co.nz/modpack/latestForge_"+gameVersion+".json");
+                File f = new File(getDir(), "version.json");
+                FileUtils.copyURLToFile(url,f);
+                System.out.println("Using version.json from:" + url.toString());
+                return f;
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return new File(getDir(), "version.json");
+            }
+        }
     }
 
     /**
@@ -121,7 +151,15 @@ public class Instance implements Comparable<Instance> {
      */
     @JsonIgnore
     public File getCustomJarPath() {
-        return new File(getContentDir(), "custom_jar.jar");
+        File file = new File(getContentDir(), "custom_jar.jar");
+        if (file.exists())
+        {
+            return file;
+        }
+        else
+        {
+            return new File(getContentDir(), "minecraft.jar");
+        }
     }
 
     @Override

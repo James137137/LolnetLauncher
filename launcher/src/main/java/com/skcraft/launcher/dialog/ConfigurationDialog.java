@@ -3,7 +3,6 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher.dialog;
 
 import com.skcraft.launcher.Configuration;
@@ -17,6 +16,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+
+import java.io.File;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.prefs.Preferences;
 
 /**
  * A dialog to modify configuration options.
@@ -37,19 +43,14 @@ public class ConfigurationDialog extends JDialog {
     private final FormPanel gameSettingsPanel = new FormPanel();
     private final JSpinner widthSpinner = new JSpinner();
     private final JSpinner heightSpinner = new JSpinner();
-    private final FormPanel proxySettingsPanel = new FormPanel();
-    private final JCheckBox useProxyCheck = new JCheckBox(SharedLocale.tr("options.useProxyCheck"));
-    private final JTextField proxyHostText = new JTextField();
-    private final JSpinner proxyPortText = new JSpinner();
-    private final JTextField proxyUsernameText = new JTextField();
-    private final JPasswordField proxyPasswordText = new JPasswordField();
     private final FormPanel advancedPanel = new FormPanel();
     private final JTextField gameKeyText = new JTextField();
     private final LinedBoxPanel buttonsPanel = new LinedBoxPanel(true);
+    private final LinedBoxPanel buttonsPanel2 = new LinedBoxPanel(true);
     private final JButton okButton = new JButton(SharedLocale.tr("button.ok"));
     private final JButton cancelButton = new JButton(SharedLocale.tr("button.cancel"));
-    private final JButton aboutButton = new JButton(SharedLocale.tr("options.about"));
     private final JButton logButton = new JButton(SharedLocale.tr("options.launcherConsole"));
+    private final JButton changeDataStorageLocationButton = new JButton("Change Data Directory...");
 
     /**
      * Create a new configuration dialog.
@@ -77,11 +78,6 @@ public class ConfigurationDialog extends JDialog {
         mapper.map(permGenSpinner, "permGen");
         mapper.map(widthSpinner, "windowWidth");
         mapper.map(heightSpinner, "widowHeight");
-        mapper.map(useProxyCheck, "proxyEnabled");
-        mapper.map(proxyHostText, "proxyHost");
-        mapper.map(proxyPortText, "proxyPort");
-        mapper.map(proxyUsernameText, "proxyUsername");
-        mapper.map(proxyPasswordText, "proxyPassword");
         mapper.map(gameKeyText, "gameKey");
 
         mapper.copyFromObject();
@@ -103,20 +99,14 @@ public class ConfigurationDialog extends JDialog {
         SwingHelper.removeOpaqueness(gameSettingsPanel);
         tabbedPane.addTab(SharedLocale.tr("options.minecraftTab"), SwingHelper.alignTabbedPane(gameSettingsPanel));
 
-        proxySettingsPanel.addRow(useProxyCheck);
-        proxySettingsPanel.addRow(new JLabel(SharedLocale.tr("options.proxyHost")), proxyHostText);
-        proxySettingsPanel.addRow(new JLabel(SharedLocale.tr("options.proxyPort")), proxyPortText);
-        proxySettingsPanel.addRow(new JLabel(SharedLocale.tr("options.proxyUsername")), proxyUsernameText);
-        proxySettingsPanel.addRow(new JLabel(SharedLocale.tr("options.proxyPassword")), proxyPasswordText);
-        SwingHelper.removeOpaqueness(proxySettingsPanel);
-        tabbedPane.addTab(SharedLocale.tr("options.proxyTab"), SwingHelper.alignTabbedPane(proxySettingsPanel));
-
-        advancedPanel.addRow(new JLabel(SharedLocale.tr("options.gameKey")), gameKeyText);
+        //advancedPanel.addRow(new JLabel(SharedLocale.tr("options.gameKey")), gameKeyText);
+        //buttonsPanel2.addGlue();
+        buttonsPanel2.addElement(changeDataStorageLocationButton);
+        advancedPanel.add(buttonsPanel2);
         SwingHelper.removeOpaqueness(advancedPanel);
         tabbedPane.addTab(SharedLocale.tr("options.advancedTab"), SwingHelper.alignTabbedPane(advancedPanel));
 
         buttonsPanel.addElement(logButton);
-        buttonsPanel.addElement(aboutButton);
         buttonsPanel.addGlue();
         buttonsPanel.addElement(okButton);
         buttonsPanel.addElement(cancelButton);
@@ -130,13 +120,6 @@ public class ConfigurationDialog extends JDialog {
 
         cancelButton.addActionListener(ActionListeners.dispose(this));
 
-        aboutButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                AboutDialog.showAboutDialog(ConfigurationDialog.this);
-            }
-        });
-
         okButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -148,6 +131,47 @@ public class ConfigurationDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ConsoleFrame.showMessages();
+            }
+        });
+
+        changeDataStorageLocationButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Preferences userNodeForPackage = java.util.prefs.Preferences.userRoot();
+                String currentPath = userNodeForPackage.get("LolnetLauncherDataPath", "");
+                if (currentPath == null || currentPath.equalsIgnoreCase("")) {
+                    currentPath = Launcher.dataDir.getAbsolutePath();
+                }
+                String FilePath = JOptionPane.showInputDialog("Enter Data Storage Location",
+                        currentPath);
+                if (FilePath == null || FilePath.equalsIgnoreCase("")) {
+                    return;
+                }
+                File file = new File(new File(FilePath).getParent());
+
+                if (file.exists()) {
+                    File folder = new File(FilePath);
+                    boolean mkdirs = folder.mkdirs();
+                    if (folder.exists() || folder.mkdirs()) {
+                        String oldPath = userNodeForPackage.get("LolnetLauncherDataPath", "");
+                        userNodeForPackage.put("LolnetLauncherDataPath", FilePath);
+                        if (oldPath == null || oldPath.equalsIgnoreCase("")) {
+                            JOptionPane.showMessageDialog(null, "Changed. New path is now: " + FilePath, "success" + "\n Please restart Launcher to take effect", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Path Changed from " + oldPath + ".\n New path is now: " + FilePath + "\n Please restart Launcher to take effect", "success", JOptionPane.INFORMATION_MESSAGE);
+                        }
+
+                        if (JOptionPane.showConfirmDialog(null, "Would you like to restart now?", "Restart?",
+                                JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                            Launcher.restartLauncher();
+                        }
+
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Failed to create directory. Do you have permission?", "Error: no permission", JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(null, "File Path does not exist: " + file.getPath(), "Error: No Path Found", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
     }

@@ -20,7 +20,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+
+import java.util.prefs.Preferences;
+
 public class SelfUpdater implements Callable<File>, ProgressObservable {
+
+    public static boolean updatedAlready = false;
 
     private final Launcher launcher;
     private final URL url;
@@ -39,8 +44,10 @@ public class SelfUpdater implements Callable<File>, ProgressObservable {
 
         try {
             File dir = launcher.getLauncherBinariesDir();
-            File file = new File(dir, String.valueOf(System.currentTimeMillis()) + ".jar.pack");
-            File tempFile = installer.getDownloader().download(url, "", 10000, "launcher.jar.pack");
+            File file = new File(dir, String.valueOf(System.currentTimeMillis()) + ".jar");
+            String filePath = file.getAbsolutePath();
+            Preferences userNodeForPackage = java.util.prefs.Preferences.userNodeForPackage(Launcher.class);
+            File tempFile = installer.getDownloader().download(url, "", 10000, "LolnetLauncher.jar");
 
             progress = installer.getDownloader();
             installer.download();
@@ -50,6 +57,8 @@ public class SelfUpdater implements Callable<File>, ProgressObservable {
             progress = installer;
             installer.execute();
 
+            updatedAlready = true;
+            userNodeForPackage.put("LolnetLauncherLatestUpdate",filePath);
             return file;
         } finally {
             executor.shutdownNow();

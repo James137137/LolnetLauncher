@@ -7,7 +7,6 @@
 package com.skcraft.launcher.install;
 
 import com.skcraft.concurrency.ProgressObservable;
-import com.skcraft.launcher.util.SharedLocale;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.java.Log;
@@ -19,7 +18,8 @@ import java.util.Collections;
 import java.util.List;
 
 import static com.skcraft.launcher.LauncherUtils.checkInterrupted;
-import static com.skcraft.launcher.util.SharedLocale.tr;
+import com.skcraft.launcher.util.SharedLocale;
+
 
 @Log
 public class Installer implements ProgressObservable {
@@ -78,7 +78,7 @@ public class Installer implements ProgressObservable {
             if (status == null) {
                 status = running.toString();
             }
-            return tr("installer.executing", count - finished) + "\n" + status;
+            return SharedLocale.tr("installer.executing", count - finished) + "\n" + status;
         } else {
             return SharedLocale.tr("installer.installing");
         }

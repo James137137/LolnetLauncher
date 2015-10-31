@@ -12,6 +12,8 @@ import com.skcraft.launcher.util.SharedLocale;
 import javax.swing.table.AbstractTableModel;
 import java.util.List;
 
+
+
 public class FeatureTableModel extends AbstractTableModel {
 
     private final List<Feature> features;

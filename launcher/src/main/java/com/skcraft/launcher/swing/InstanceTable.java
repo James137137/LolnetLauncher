@@ -6,13 +6,19 @@
 
 package com.skcraft.launcher.swing;
 
+import javax.swing.*;
 import javax.swing.table.TableModel;
+import java.awt.*;
 
-public class InstanceTable extends DefaultTable {
+public class InstanceTable extends JTable {
 
     public InstanceTable() {
-        super();
+        setShowGrid(false);
+        setRowHeight(Math.max(getRowHeight() + 4, 20));
+        setIntercellSpacing(new Dimension(0, 0));
+        setFillsViewportHeight(true);
         setTableHeader(null);
+        setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     }
 
     @Override
