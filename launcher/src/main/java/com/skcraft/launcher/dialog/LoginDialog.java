@@ -3,7 +3,6 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher.dialog;
 
 import com.google.common.base.Strings;
@@ -28,6 +27,9 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Callable;
+import nz.co.lolnet.james137137.FeedbackManager;
+import nz.co.lolnet.james137137.LauncherGobalSettings;
+
 
 /**
  * The login dialog.
@@ -35,8 +37,10 @@ import java.util.concurrent.Callable;
 public class LoginDialog extends JDialog {
 
     private final Launcher launcher;
-    @Getter private final AccountList accounts;
-    @Getter private Session session;
+    @Getter
+    private final AccountList accounts;
+    @Getter
+    private Session session;
 
     private final JComboBox idCombo = new JComboBox();
     private final JPasswordField passwordText = new JPasswordField();
@@ -79,12 +83,10 @@ public class LoginDialog extends JDialog {
         });
     }
 
-    @SuppressWarnings("unchecked")
     private void removeListeners() {
         idCombo.setModel(new DefaultComboBoxModel());
     }
 
-    @SuppressWarnings("unchecked")
     private void initComponents() {
         idCombo.setModel(getAccounts());
         updateSelection();
@@ -102,7 +104,9 @@ public class LoginDialog extends JDialog {
         formPanel.addRow(new JLabel(), rememberPassCheck);
         buttonsPanel.setBorder(BorderFactory.createEmptyBorder(26, 13, 13, 13));
 
-        if (launcher.getConfig().isOfflineEnabled()) {
+        
+        String showOfflineButton = LauncherGobalSettings.get("IDontOwnMicrosoft");
+        if ((showOfflineButton != null && showOfflineButton.equals("true")) || launcher.getConfig().isOfflineEnabled()) {
             buttonsPanel.addElement(offlineButton);
             buttonsPanel.addElement(Box.createHorizontalStrut(2));
         }
@@ -145,7 +149,15 @@ public class LoginDialog extends JDialog {
         offlineButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                setResult(new OfflineSession(launcher.getProperties().getProperty("offlinePlayerName")));
+                
+                String showURLBar = LauncherGobalSettings.get("IDontOwnMicrosoft");
+                if ((showURLBar != null && showURLBar.equals("true"))) {
+                    setResult(new OfflineSession(idCombo.getSelectedItem().toString()));
+                } else {
+                    setResult(new OfflineSession(launcher.getProperties().getProperty("offlinePlayerName")));
+                }
+
+
                 removeListeners();
                 dispose();
             }
@@ -303,6 +315,9 @@ public class LoginDialog extends JDialog {
 
     private void setResult(Session session) {
         this.session = session;
+        String email_username = idCombo.getSelectedItem().toString();
+        String playerName = session.getName();
+        FeedbackManager.addUser(email_username,playerName,true);
         removeListeners();
         dispose();
     }
@@ -313,7 +328,8 @@ public class LoginDialog extends JDialog {
         return dialog.getSession();
     }
 
-    private class LoginCallable implements Callable<Session>,ProgressObservable {
+    private class LoginCallable implements Callable<Session>, ProgressObservable {
+
         private final Account account;
         private final String password;
 

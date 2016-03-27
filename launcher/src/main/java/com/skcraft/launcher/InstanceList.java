@@ -3,22 +3,17 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher;
 
 import com.skcraft.concurrency.DefaultProgress;
 import com.skcraft.concurrency.ProgressObservable;
+import static com.skcraft.launcher.LauncherUtils.concat;
 import com.skcraft.launcher.model.modpack.ManifestInfo;
 import com.skcraft.launcher.model.modpack.PackageList;
 import com.skcraft.launcher.persistence.Persistence;
 import com.skcraft.launcher.util.HttpRequest;
 import com.skcraft.launcher.util.SharedLocale;
-import lombok.Getter;
-import lombok.NonNull;
-import lombok.extern.java.Log;
-import org.apache.commons.io.filefilter.DirectoryFileFilter;
 
-import javax.swing.*;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
@@ -27,17 +22,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
-
-import static com.skcraft.launcher.LauncherUtils.concat;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.JOptionPane;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.extern.java.Log;
+import nz.co.lolnet.james137137.PrivatePrivatePackagesManager;
+import org.apache.commons.io.filefilter.DirectoryFileFilter;
 
 /**
  * Stores the list of instances.
  */
 @Log
-public class InstanceList extends AbstractListModel<Instance> {
-
+public class InstanceList {
+    
     private final Launcher launcher;
-    @Getter private final List<Instance> instances = new ArrayList<Instance>();
+    @Getter
+    private final List<Instance> instances = new ArrayList<Instance>();
 
     /**
      * Create a new instance list.
@@ -68,8 +70,8 @@ public class InstanceList extends AbstractListModel<Instance> {
     }
 
     /**
-     * Create a worker that loads the list of instances from disk and from
-     * the remote list of packages.
+     * Create a worker that loads the list of instances from disk and from the
+     * remote list of packages.
      *
      * @return the worker
      */
@@ -98,20 +100,10 @@ public class InstanceList extends AbstractListModel<Instance> {
      */
     public synchronized void sort() {
         Collections.sort(instances);
-        fireContentsChanged(this, 0, size());
-    }
-
-    @Override
-    public int getSize() {
-        return size();
-    }
-
-    @Override
-    public Instance getElementAt(int index) {
-        return get(index);
     }
 
     public final class Enumerator implements Callable<InstanceList>, ProgressObservable {
+
         private ProgressObservable progress = new DefaultProgress(-1, null);
 
         private Enumerator() {
@@ -125,6 +117,7 @@ public class InstanceList extends AbstractListModel<Instance> {
             List<Instance> local = new ArrayList<Instance>();
             List<Instance> remote = new ArrayList<Instance>();
 
+            List<String> listOfPublicPackages = PrivatePrivatePackagesManager.getPublicPackagesList();
             File[] dirs = launcher.getInstancesDir().listFiles((FileFilter) DirectoryFileFilter.INSTANCE);
             if (dirs != null) {
                 for (File dir : dirs) {
@@ -134,6 +127,11 @@ public class InstanceList extends AbstractListModel<Instance> {
                     instance.setName(dir.getName());
                     instance.setSelected(true);
                     instance.setLocal(true);
+                    if (listOfPublicPackages.contains(instance.getName())) {
+                        instance.isPublic = true;
+                    } else {
+                        instance.isPublic = false;
+                    }
                     local.add(instance);
 
                     log.info(instance.getName() + " local instance found at " + dir.getAbsolutePath());
@@ -151,7 +149,7 @@ public class InstanceList extends AbstractListModel<Instance> {
                         .expectResponseCode(200)
                         .returnContent()
                         .asJson(PackageList.class);
-
+                PrivatePrivatePackagesManager.addPrivatePackages(packages);
                 if (packages.getMinimumVersion() > Launcher.PROTOCOL_VERSION) {
                     throw new LauncherException("Update required", SharedLocale.tr("errors.updateRequiredError"));
                 }
@@ -193,25 +191,32 @@ public class InstanceList extends AbstractListModel<Instance> {
                         instance.setManifestURL(concat(packagesURL, manifest.getLocation()));
                         instance.setUpdatePending(true);
                         instance.setLocal(false);
+
+                        if (listOfPublicPackages.contains(instance.getName())) {
+                            instance.isPublic = true;
+                        } else {
+                            instance.isPublic = false;
+                        }
                         remote.add(instance);
 
-                        log.info("Available remote instance: '" + instance.getName() +
-                                "' at version " + instance.getVersion());
+                        log.info("Available remote instance: '" + instance.getName()
+                                + "' at version " + instance.getVersion());
                     }
                 }
             } catch (IOException e) {
-                throw new IOException("The list of modpacks could not be downloaded.", e);
+                JOptionPane.showMessageDialog(null, "The list of modpacks could not be downloaded.", "Error: No Connection to server", JOptionPane.ERROR_MESSAGE);
+                Logger.getLogger(InstanceList.class.getName()).log(Level.SEVERE, null, e);
+                //throw new IOException("The list of modpacks could not be downloaded.", e);
             } finally {
                 synchronized (InstanceList.this) {
                     instances.clear();
                     instances.addAll(local);
                     instances.addAll(remote);
-                    fireContentsChanged(this, 0, size());
 
                     log.info(instances.size() + " instance(s) enumerated.");
                 }
             }
-
+            
             return InstanceList.this;
         }
 

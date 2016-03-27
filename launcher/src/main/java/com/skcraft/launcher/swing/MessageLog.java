@@ -111,29 +111,21 @@ public class MessageLog extends JPanel {
      * @param line line
      * @param attributes attribute set, or null for none
      */
-    public void log(final String line, AttributeSet attributes) {
-        final Document d = document;
-        final JTextComponent t = textComponent;
+    public void log(String line, AttributeSet attributes) {
         if (colorEnabled) {
             if (line.startsWith("(!!)")) {
                 attributes = highlightedAttributes;
             }
         }
-        final AttributeSet a = attributes;
         
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    int offset = d.getLength();
-                    d.insertString(offset, line,
-                            (a != null && colorEnabled) ? a : defaultAttributes);
-                    t.setCaretPosition(d.getLength());
-                } catch (BadLocationException ble) {
-                
-                }
-            }
-        });
+        try {
+            int offset = document.getLength();
+            document.insertString(offset, line,
+                    (attributes != null && colorEnabled) ? attributes : defaultAttributes);
+            textComponent.setCaretPosition(document.getLength());
+        } catch (BadLocationException ble) {
+        
+        }
     }
     
     /**

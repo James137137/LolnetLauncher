@@ -22,7 +22,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-import static com.skcraft.launcher.util.SharedLocale.tr;
+
 
 /**
  * A frame capable of showing messages.
@@ -58,8 +58,8 @@ public class ConsoleFrame extends JFrame {
      */
     public ConsoleFrame(@NonNull String title, int numLines, boolean colorEnabled) {
         messageLog = new MessageLog(numLines, colorEnabled);
-        trayRunningIcon = SwingHelper.createImage(Launcher.class, "tray_ok.png");
-        trayClosedIcon = SwingHelper.createImage(Launcher.class, "tray_closed.png");
+        trayRunningIcon = SwingHelper.readIconImage(Launcher.class, "icon.png");
+        trayClosedIcon = SwingHelper.readIconImage(Launcher.class, "icon.png");
 
         setTitle(title);
         setIconImage(trayRunningIcon);
@@ -123,18 +123,18 @@ public class ConsoleFrame extends JFrame {
     private void pastebinLog() {
         String text = messageLog.getPastableText();
         // Not really bytes!
-        messageLog.log(tr("console.pasteUploading", text.length()), messageLog.asHighlighted());
+        messageLog.log(SharedLocale.tr("console.pasteUploading", text.length()), messageLog.asHighlighted());
 
         PastebinPoster.paste(text, new PastebinPoster.PasteCallback() {
             @Override
             public void handleSuccess(String url) {
-                messageLog.log(tr("console.pasteUploaded", url), messageLog.asHighlighted());
+                messageLog.log(SharedLocale.tr("console.pasteUploaded", url), messageLog.asHighlighted());
                 SwingHelper.openURL(url, messageLog);
             }
 
             @Override
             public void handleError(String err) {
-                messageLog.log(tr("console.pasteFailed", err), messageLog.asError());
+                messageLog.log(SharedLocale.tr("console.pasteFailed", err), messageLog.asError());
             }
         });
     }

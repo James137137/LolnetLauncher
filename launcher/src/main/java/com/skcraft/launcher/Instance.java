@@ -3,7 +3,6 @@
  * Copyright (C) 2010-2014 Albert Pham <http://www.sk89q.com> and contributors
  * Please see LICENSE.txt for license information.
  */
-
 package com.skcraft.launcher;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -19,8 +18,8 @@ import java.net.URL;
 import java.util.Date;
 
 /**
- * An instance is a profile that represents one particular installation
- * of the game, with separate files and so on.
+ * An instance is a profile that represents one particular installation of the
+ * game, with separate files and so on.
  */
 @Data
 public class Instance implements Comparable<Instance> {
@@ -31,18 +30,28 @@ public class Instance implements Comparable<Instance> {
     private boolean updatePending;
     private boolean installed;
     private Date lastAccessed;
+    public boolean isPublic;
     @JsonProperty("launch")
     private LaunchModifier launchModifier;
 
-    @JsonIgnore private File dir;
-    @JsonIgnore private URL manifestURL;
-    @JsonIgnore private int priority;
-    @JsonIgnore private boolean selected;
-    @JsonIgnore private boolean local;
+    @JsonIgnore
+    private File dir;
+    @JsonIgnore
+    private URL manifestURL;
+    @JsonIgnore
+    private int priority;
+    @JsonIgnore
+    private boolean selected;
+    @JsonIgnore
+    private boolean local;
+    @JsonIgnore
+    private int playerCount = -2;
+
+    public static String SortMethod = "Default";
 
     /**
-     * Get the tile of the instance, which might be the same as the
-     * instance name if no title is set.
+     * Get the tile of the instance, which might be the same as the instance
+     * name if no title is set.
      *
      * @return a title
      */
@@ -51,8 +60,8 @@ public class Instance implements Comparable<Instance> {
     }
 
     /**
-     * Update the given process builder with launch settings that are
-     * specific to this instance.
+     * Update the given process builder with launch settings that are specific
+     * to this instance.
      *
      * @param builder the process builder
      */
@@ -78,18 +87,16 @@ public class Instance implements Comparable<Instance> {
     }
 
     /**
-     * Get the file for the directory where Minecraft's game files are
-     * stored, including user files (screenshots, etc.).
+     * Get the file for the directory where Minecraft's game files are stored,
+     * including user files (screenshots, etc.).
      *
      * @return the content directory, which may not exist
      */
     @JsonIgnore
     public File getContentDir() {
         File dir = new File(this.dir, "minecraft");
-        try {
-            Files.createParentDirs(dir);
-            dir.mkdir();
-        } catch (IOException ignored) {
+        if (!dir.exists()) {
+            dir.mkdirs();
         }
         return dir;
     }
@@ -121,7 +128,12 @@ public class Instance implements Comparable<Instance> {
      */
     @JsonIgnore
     public File getCustomJarPath() {
-        return new File(getContentDir(), "custom_jar.jar");
+        File file = new File(getContentDir(), "custom_jar.jar");
+        if (file.exists()) {
+            return file;
+        } else {
+            return new File(getContentDir(), "minecraft.jar");
+        }
     }
 
     @Override
@@ -142,29 +154,82 @@ public class Instance implements Comparable<Instance> {
     @Override
     public int compareTo(Instance o) {
         if (isLocal() && !o.isLocal()) {
+            switch (SortMethod) {
+                case "Default":
+                    return -1;
+                case "Name":
+                    if (title.compareTo(o.getTitle()) == 0) {
+                        return -1;
+                    }
+                    return title.compareTo(o.getTitle());
+                case "Player":
+                    if (playerCount > o.getPlayerCount()) {
+                        return -1;
+                    } else if (playerCount < o.getPlayerCount()) {
+                        return 1;
+                    }
+
+            }
             return -1;
         } else if (!isLocal() && o.isLocal()) {
             return 1;
         } else if (isLocal() && o.isLocal()) {
-            Date otherDate = o.getLastAccessed();
+            Date otherDate;
+            switch (SortMethod) {
+                case "Default":
+                    otherDate = o.getLastAccessed();
 
-            if (otherDate == null && lastAccessed == null) {
-                return 0;
-            } else if (otherDate == null) {
-                return -1;
-            } else if (lastAccessed == null) {
-                return 1;
-            } else {
-                return -lastAccessed.compareTo(otherDate);
+                    if (otherDate == null && lastAccessed == null) {
+                        return 0;
+                    } else if (otherDate == null) {
+                        return -1;
+                    } else if (lastAccessed == null) {
+                        return 1;
+                    } else {
+                        return -lastAccessed.compareTo(otherDate);
+                    }
+                case "Name":
+                    if (title.compareTo(o.getTitle()) == 0) {
+                        otherDate = o.getLastAccessed();
+
+                        if (otherDate == null && lastAccessed == null) {
+                            return 0;
+                        } else if (otherDate == null) {
+                            return -1;
+                        } else if (lastAccessed == null) {
+                            return 1;
+                        } else {
+                            return -lastAccessed.compareTo(otherDate);
+                        }
+                    }
+                    return title.compareTo(o.getTitle());
+                case "Player":
+                    if (playerCount > o.getPlayerCount()) {
+                        return -1;
+                    } else if (playerCount < o.getPlayerCount()) {
+                        return 1;
+                    } else {
+                        otherDate = o.getLastAccessed();
+
+                        if (otherDate == null && lastAccessed == null) {
+                            return 0;
+                        } else if (otherDate == null) {
+                            return -1;
+                        } else if (lastAccessed == null) {
+                            return 1;
+                        } else {
+                            return -lastAccessed.compareTo(otherDate);
+                        }
+                    }
+                default:
+                    return 0;
             }
+        } else if (priority > o.priority) {
+            return -1;
+        } else if (priority < o.priority) {
+            return 1;
         } else {
-            if (priority > o.priority) {
-                return -1;
-            } else if (priority < o.priority) {
-                return 1;
-            } else {
-                return 0;
-            }
+            return 0;
         }
     }
 

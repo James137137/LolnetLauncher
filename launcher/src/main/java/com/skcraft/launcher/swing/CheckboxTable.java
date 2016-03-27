@@ -8,8 +8,17 @@ package com.skcraft.launcher.swing;
 
 import javax.swing.*;
 import javax.swing.table.TableModel;
+import java.awt.*;
 
-public class CheckboxTable extends DefaultTable {
+public class CheckboxTable extends JTable {
+
+    public CheckboxTable() {
+        setShowGrid(false);
+        setRowHeight((int) (Math.max(getRowHeight(), new JCheckBox().getPreferredSize().getHeight() - 2)));
+        setIntercellSpacing(new Dimension(0, 0));
+        setFillsViewportHeight(true);
+        setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    }
 
     @Override
     public void setModel(TableModel dataModel) {
@@ -19,5 +28,4 @@ public class CheckboxTable extends DefaultTable {
         } catch (ArrayIndexOutOfBoundsException e) {
         }
     }
-
 }

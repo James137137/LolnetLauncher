@@ -17,6 +17,7 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.util.List;
 
+
 import static javax.swing.BorderFactory.createEmptyBorder;
 
 public class FeatureSelectionDialog extends JDialog {

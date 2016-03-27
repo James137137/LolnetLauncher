@@ -6,7 +6,6 @@
 
 package com.skcraft.launcher.model.modpack;
 
-import com.google.common.collect.Lists;
 import com.skcraft.launcher.launch.JavaProcessBuilder;
 import lombok.Data;
 
@@ -15,11 +14,7 @@ import java.util.List;
 @Data
 public class LaunchModifier {
 
-    private List<String> flags = Lists.newArrayList();
-
-    public void setFlags(List<String> flags) {
-        this.flags = flags != null ? flags : Lists.<String>newArrayList();
-    }
+    private List<String> flags;
 
     public void modify(JavaProcessBuilder builder) {
         if (flags != null) {
